@@ -1,6 +1,6 @@
 # kube-recycle-bin
 
-English | [简体中文](README_zh-CN.md)
+Forked and contributed features from https://github.com/ketches/kube-recycle-bin.
 
 kube-recycle-bin(krb) is a Kubernetes resource recycling bin that can automatically recycle and quickly restore deleted resources.
 
