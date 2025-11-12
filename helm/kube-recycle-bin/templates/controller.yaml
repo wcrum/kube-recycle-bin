@@ -1,0 +1,74 @@
+{{- if .Values.controller.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.controller.serviceAccount.name }}
+  namespace: {{ include "kube-recycle-bin.namespace" . }}
+  labels:
+    {{- include "kube-recycle-bin.controller.labels" . | nindent 4 }}
+{{- if .Values.controller.serviceAccount.create }}
+automountServiceAccountToken: true
+{{- end }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.controller.serviceAccount.name }}
+  labels:
+    {{- include "kube-recycle-bin.controller.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    verbs: ["*"]
+  - apiGroups: ["krb.wcrum.dev"]
+    resources: ["recyclepolicies"]
+    verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.controller.serviceAccount.name }}
+  labels:
+    {{- include "kube-recycle-bin.controller.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.controller.serviceAccount.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.controller.serviceAccount.name }}
+    namespace: {{ include "kube-recycle-bin.namespace" . }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.controller.serviceAccount.name }}
+  namespace: {{ include "kube-recycle-bin.namespace" . }}
+  labels:
+    {{- include "kube-recycle-bin.controller.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controller.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kube-recycle-bin.controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kube-recycle-bin.controller.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.controller.serviceAccount.name }}
+      containers:
+        - name: krb-controller
+          image: {{ include "kube-recycle-bin.image" (dict "root" . "image" .Values.controller.image) }}
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.controller.resources | nindent 12 }}
+{{- end }}
+

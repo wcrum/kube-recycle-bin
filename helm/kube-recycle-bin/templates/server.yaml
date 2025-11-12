@@ -1,0 +1,100 @@
+{{- if .Values.server.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.server.serviceAccount.name }}
+  namespace: {{ include "kube-recycle-bin.namespace" . }}
+  labels:
+    {{- include "kube-recycle-bin.server.labels" . | nindent 4 }}
+{{- if .Values.server.serviceAccount.create }}
+automountServiceAccountToken: true
+{{- end }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.server.serviceAccount.name }}
+  labels:
+    {{- include "kube-recycle-bin.server.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["krb.wcrum.dev"]
+    resources: ["recycleitems"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["krb.wcrum.dev"]
+    resources: ["recyclepolicies"]
+    verbs: ["get", "list", "create", "delete"]
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["create"]
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.server.serviceAccount.name }}
+  labels:
+    {{- include "kube-recycle-bin.server.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.server.serviceAccount.name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.server.serviceAccount.name }}
+    namespace: {{ include "kube-recycle-bin.namespace" . }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.server.serviceAccount.name }}
+  namespace: {{ include "kube-recycle-bin.namespace" . }}
+  labels:
+    {{- include "kube-recycle-bin.server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kube-recycle-bin.server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kube-recycle-bin.server.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.server.serviceAccount.name }}
+      containers:
+        - name: krb-server
+          image: {{ include "kube-recycle-bin.image" (dict "root" . "image" .Values.server.image) }}
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.server.service.targetPort }}
+          env:
+            {{- range $key, $value := .Values.server.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.server.serviceAccount.name }}
+  namespace: {{ include "kube-recycle-bin.namespace" . }}
+  labels:
+    {{- include "kube-recycle-bin.server.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "kube-recycle-bin.server.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.server.service.port }}
+      targetPort: {{ .Values.server.service.targetPort }}
+  type: {{ .Values.server.service.type }}
+{{- end }}
+

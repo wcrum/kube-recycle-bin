@@ -1,0 +1,10 @@
+apiVersion: krb.wcrum.dev/v1
+kind: RecyclePolicy
+metadata:
+  name: recycle-deployments-default
+target:
+  group: apps
+  resource: deployments
+  namespaces:
+    - default
+

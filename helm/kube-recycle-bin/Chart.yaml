@@ -1,0 +1,17 @@
+apiVersion: v2
+name: kube-recycle-bin
+description: A Helm chart for kube-recycle-bin - a Kubernetes resource recycle bin operator
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - kubernetes
+  - recycle-bin
+  - operator
+  - webhook
+maintainers:
+  - name: wcrum
+home: https://github.com/wcrum/kube-recycle-bin
+sources:
+  - https://github.com/wcrum/kube-recycle-bin
+
